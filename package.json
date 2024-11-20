@@ -22,7 +22,7 @@
     "url": "https://github.com/phili67/jQuery-Photo-Uploader/issues"
   },
   "homepage": "https://github.com/phili67/jQuery-Photo-Uploader#readme",
-  "devDependencies": phili67
+  "devDependencies": {
     "minifier": "0.8.1"
   },
   "dependencies": {
