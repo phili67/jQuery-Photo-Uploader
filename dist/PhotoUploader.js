@@ -1,20 +1,20 @@
 (function ($) {
-
     var parameters = {};
     var canvas = {};
     var context = {};
     var inputCache = [];
+    var cameraId = 0;
+    var isStarted = false;
 
     var camera = {
         deviceIds: [],
         constraints: {
-            /*video: {
-                width: parameters.photoWidth,
-                height: parameters.photoHeight,
-                frameRate: {ideal: 10, max: 10}
-            },*/
-            video:true,
-            audio:false
+            'audio': {'echoCancellation': true},
+            'video': {
+                'deviceId': cameraId,
+                'width': {'min': parameters.photoWidth},
+                'height': {'min': parameters.photoHeight},                
+            }
         }
     };
 
@@ -39,6 +39,8 @@
 
     $.fn.PhotoUploader = function (userParameters) {
         parameters = $.extend({}, $.fn.PhotoUploader.defaultParameters, userParameters);
+        this.stream = null;
+
         canvas = $("<canvas>", {
             id: "canvas",
             style: "border: 1px solid black; touch-action: none"
@@ -60,7 +62,7 @@
         context = canvas.get(0).getContext("2d");
 
         this.append(createModal());
-
+        
         $("#upload-image").on("hidden.bs.modal", function () {
             stopVideo();
         });
@@ -82,14 +84,13 @@
             text: i18next.t("Upload Photo")
         })).append($("<button>", {
             type: "button",
-            class: "close",
-            "data-dismiss": "modal",
-            "aria-label": "Close"
-        }).append(
-            $("<span>", {
-                "aria-hidden": "true",
-                html: "&times;"
-            })));
+            class: "bootbox-close-button close",
+            'html': "&times;",
+            'data-dismiss': "modal",
+            'aria-label': "Close"
+            }).on('click', () => {
+            stopVideo();
+        }));
 
         return modalHeader;
     }
@@ -104,6 +105,8 @@
                 }
             },
             id: "fileSelect"
+        }).on('click', () => {
+            stopVideo();
         }).append(
             $("<input>", {
                 style: "display: none",
@@ -111,7 +114,7 @@
                 name: "file",
                 id: "file",
                 size: "50"
-            }).change(function (e) {
+            }).on('change', (e) => {
                 fileSelectChanged(e)
             })
         ).append(
@@ -136,16 +139,23 @@
                 $("<label>", {
                     id: "captureFromWebcam",
                     html: '<i class="fas fa-video IconCaptureFromWebcam" aria-hidden="true"></i><br>' + i18next.t("Capture from Webcam"),
-                }).click(function () {
-                    $("#previewPane").hide();
-                    $("#capturePane").show();
-                    $("#retake").show();
-                    startVideo();
-                    $("#snap").click(function () {
-                        snapshotVideo();
-                    })
+                }).on('click', () => {
+                    if (!isStarted) {
+                        $("#previewPane").hide();
+                        $("#capturePane").show();
+                        $("#retake").show();
+                        startVideo(camera);
+                        $("#snap").on ('click', () => {
+                            snapshotVideo();
+                        })
+                    }
+                    isStarted = true;
                 })
             );
+
+            // Get the initial set of cameras connected
+            getConnectedDevices('videoinput');
+
             return cameraSelect;
         } else {
             return null;
@@ -161,15 +171,15 @@
             id: "capturePane",
             style: "display:none; text-align: center"
         }).append($("<div>", {
-            class: "cold-md-12 text-center"
+            class: "cold-md-12 text-center",
+            style:'margin-top:10px'
         }).append(
             $("<video>", {
                 id: "video",
-                /*width: parameters.photoWidth,
-                height: parameters.photoHeight,*/
-                //style: "margin-left: auto;margin-right: auto;display: block;max-width: " + parameters.photoWidth+"px;max-height:" + parameters.photoHeight+"px",
+                width: parameters.photoWidth,
+                height: parameters.photoHeight,
+                style: "margin-left: auto;margin-right: auto;display: block;max-width: " + parameters.photoWidth+"px;max-height:" + parameters.photoHeight+"px",
                 style: "padding: 0;margin: auto;display: block;max-width: " + parameters.photoWidth+"px;max-height:" + parameters.photoHeight+"px;position: relative;top: 0;bottom: 0;left: 0;right: 0;",
-                //autoplay: true,
                 controls: true
             })
         ).append(
@@ -210,7 +220,7 @@
                 id: "retake",
                 style: "display:none",
                 text: i18next.t("Re-Take Photo")
-            }).click(function () {
+            }).on('click', () => {
                 retakeSnapshot();
             })
         );
@@ -218,43 +228,36 @@
 
     }
 
+    // Fetch an array of devices of a certain type
+    async function getConnectedDevices(type) {
+        $('#availableCameras').empty();
 
-    function createCameraChooser() {
-        var cameraChooser = $("<button>", {
-            class: 'btn btn-default',
-            type: 'button',
-            id: 'switcher',
-            text: i18next.t("Switch Camera")
-        });
+        await navigator.mediaDevices.enumerateDevices()
+        .then(devices => {
+            const listElement  = $('#availableCameras')
+            listElement.html = '';
 
-        navigator.mediaDevices.enumerateDevices().then(function (devices) {
             for (var i = 0; i < devices.length; i++) {
-                if (devices[i].kind !== 'videoinput') {
+                if (devices[i].kind !== type) {
                     continue;
                 }
-                camera.deviceIds.push(devices[i].deviceId);
+                listElement.append($('<option>').val(devices[i].deviceId).text(devices[i].label))
             }
+        });
+    }
 
-            if (camera.deviceIds.length > 1) {
-                camera.selectedDevice = 0;
+    // Listen for changes to media devices and update the list accordingly
+    navigator.mediaDevices.addEventListener('devicechange', event => {        
+        getConnectedDevices('videoinput');
+    });
 
-
-                cameraChooser.on('click', function () {
-                    if (camera.selectedDevice === camera.deviceIds.length - 1) {
-                        camera.selectedDevice = 0;
-                    } else {
-                        camera.selectedDevice++;
-                    }
-
-                    camera.constraints.video.deviceId =
-                        camera.deviceIds[camera.selectedDevice];
-
-                    startVideo();
-                });
-
-            } else {
-                cameraChooser.hide();
-            }
+    function createCameraChooser() {
+        var cameraChooser = $("<select>", {
+            class: 'form-control',
+            id: 'availableCameras'
+        }).on('change', () => {
+            camera.constraints.video.deviceId =  $('#availableCameras').find(":checked").val();
+            startVideo (camera);
         });
 
         return cameraChooser;
@@ -272,7 +275,7 @@
                 id: "shrink",
                 text: "-",
                 style: "font-size:20px"
-            }).click(function () {
+            }).on('click', () => {
                 shrinkImage();
             })
         ).append(
@@ -282,14 +285,12 @@
                 id: "grow",
                 text: "+",
                 style: "font-size:20px"
-            }).click(function () {
+            }).on('click', () => {
                 growImage();
             })
         );
 
         return editControls;
-
-
     }
 
     function createBody() {
@@ -316,7 +317,9 @@
             )
         );
 
-        return modalBody.append(container);
+        let body = modalBody.append(container);
+
+        return body;
     }
 
     function createFooter() {
@@ -330,7 +333,7 @@
                 class: "btn btn-default",
                 "data-dismiss": "modal",
                 text: i18next.t("Close")
-            }).click(function (event) {
+            }).on('click', (event) => {
                 $("#capturePane").hide();
                 $("#previewPane").hide();
                 stopVideo();
@@ -342,7 +345,7 @@
                 class: "btn btn-primary",
                 "data-dismiss": "modal",
                 text: '<i class="fa-solid fa-file-import"></i>' + i18next.t("Upload Image")
-            }).click(function (event) {
+            }).on('click', (event) => {
                 parameters.uploadImage(event);
             })
         );
@@ -390,9 +393,10 @@
         );
     }
 
-    function startVideo() {
+    function startVideo(camera) {
         $("#photoOr").show();
         $("#photoCapture").show();
+
         // Grab elements, create settings, etc.
         this.video = document.getElementById('video');
 
@@ -402,16 +406,17 @@
             return;
         }
 
-        // Get access to the camera!
-        /*navigator.mediaDevices.getUserMedia(camera.constraints)
-            .then(function (userCameraStream) {
-                this.stream = userCameraStream;
-                this.video.src = window.URL.createObjectURL(userCameraStream);
-                this.video.play();
-            }).catch(function (err) {
-            console.log(err.name + ": " + err.message);
-        }); // always check for errors at the end.;*/
+        if (this.stream != null) {
+            // now get all tracks
+            tracks = this.stream.getTracks();
+            // now close each track by having forEach loop
+            tracks.forEach(function(track) {
+                // stopping every track
+                track.stop();
+            });
 
+            stream = this.stream = null;
+        }
 
         navigator.mediaDevices.getUserMedia(camera.constraints)
             .then(function (stream) {
@@ -427,20 +432,35 @@
                 video.onloadedmetadata = function (e) {
                     video.play();
                 };
+                
             })
             .catch(function (err) {
                 console.log(err.name + ": " + err.message);
             });
-
     }
 
     function stopVideo() {
-        if (this.stream) {
-            this.video.pause();
-            this.video.src = '';
-            this.stream.getTracks()[0].stop();
-        }
+        stream = this.stream;
 
+        if (stream) {
+            // now get the steam 
+            
+            // now get all tracks
+            tracks = stream.getTracks();
+            // now close each track by having forEach loop
+            tracks.forEach(function(track) {
+                // stopping every track
+                track.stop();
+            });
+
+            stream = this.stream = null;
+        }
+        
+        $("#previewPane").hide();
+        $("#capturePane").hide();
+        $("#retake").hide();                
+
+        isStarted = false;
     }
 
     function retakeSnapshot() {
@@ -462,7 +482,6 @@
     }
 
     function fileSelectChanged(fileSelect) {
-
         var file = fileSelect.target.files[0];
         fileSelect.target.files = null;
         if (!file.type.match('image.*')) {
@@ -666,5 +685,4 @@
             });
         }
     }
-
 })(jQuery);
