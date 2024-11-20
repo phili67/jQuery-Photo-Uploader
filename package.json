@@ -16,13 +16,13 @@
     "Photo",
     "Capture"
   ],
-  "author": "Charles Crossan <crossan007@gmail.com> (http://www.ccrossan.com)",
+  "author": "Charles Crossan <philippe.logel@imathgeo.com> (http://www.imathgeo.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/crossan007/jQuery-Photo-Uploader/issues"
+    "url": "https://github.com/phili67/jQuery-Photo-Uploader/issues"
   },
   "homepage": "https://github.com/crossan007/jQuery-Photo-Uploader#readme",
-  "devDependencies": {
+  "devDependencies": phili67
     "minifier": "0.8.1"
   },
   "dependencies": {
