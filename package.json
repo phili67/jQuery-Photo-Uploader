@@ -4,7 +4,7 @@
   "description": "jQuery Plugin for uploading local photos and capturing from a webcam",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/crossan007/jQuery-Photo-Uploader.git"
+    "url": "git+https://github.com/phili67/jQuery-Photo-Uploader.git"
   },
   "keywords": [
     "HTML5",
