@@ -338,12 +338,12 @@
                 stopVideo();
             })
         ).append(
-            $("<input>", {
+            $("<button>", {
                 id: "uploadImage",
                 type: "submit",
                 class: "btn btn-primary",
                 "data-dismiss": "modal",
-                text: '<i class="fa-solid fa-file-import"></i>' + parameters.UploadImageText
+                text: parameters.UploadImageText
             }).on('click', (event) => {
                 parameters.uploadImage(event);
             })
