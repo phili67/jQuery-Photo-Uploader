@@ -1,6 +1,6 @@
 {
   "name": "jquery-photo-uploader",
-  "version": "1.2",
+  "version": "1.2.1",
   "description": "jQuery Plugin for uploading local photos and capturing from a webcam",
   "repository": {
     "type": "git",
