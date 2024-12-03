@@ -24,7 +24,17 @@ PhotoUploader must be initialized on the result of a jQuery Selector before use.
 ```
   window.YourApp.photoUploader = $("#photoUploader").PhotoUploader({
     url: window.YourApp.root + "/APIEndPointForPOST",
-    maxPhotoSize: "2MB"
+    maxPhotoSize: "2MB",
+    photoWidth:400,
+    photoHeight: 400,
+    UploadPhotoText: "Upload Photo",
+    UploadExistingPhotoText: "Upload an existing Photo",
+    MaxPhotoSizeText: "Max photo size",
+    CaptureFromWebcamText: "Capture from Webcam",
+    SnapPhotoText: "Snap Photo",
+    ReTakePhotoText: "Re-Take Photo",
+    CloseText: "Close",
+    UploadImageText: "Upload Image"    
    });
 ```
 To display a PhotoUploader, simply call the ```show()``` function of the already initialized PhotoUploader.
