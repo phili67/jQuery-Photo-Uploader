@@ -81,7 +81,7 @@
         modalHeader.append($("<h4>", {
             class: "modal-title",
             id: "upload-Image-label",
-            text: i18next.t("Upload Photo")
+            text: parameters.UploadPhotoText
         })).append($("<button>", {
             type: "button",
             class: "bootbox-close-button close",
@@ -120,11 +120,11 @@
         ).append(
             $("<label>", {
                 for: "file",
-                html: '<i class="far fa-image IconCaptureFromWebcam"></i><br/> '+ i18next.t("Upload an existing Photo")
+                html: '<i class="far fa-image IconCaptureFromWebcam"></i><br/> '+ parameters.UploadExistingPhotoText
             })
         ).append(
             $("<p>", {
-                text: i18next.t("Max photo size") + ": " + parameters.maxPhotoSize
+                text: parameters.MaxPhotoSizeText + ": " + parameters.maxPhotoSize
             })
         );
         return fileSelect;
@@ -138,7 +138,7 @@
             }).append(
                 $("<label>", {
                     id: "captureFromWebcam",
-                    html: '<i class="fas fa-video IconCaptureFromWebcam" aria-hidden="true"></i><br>' + i18next.t("Capture from Webcam"),
+                    html: '<i class="fas fa-video IconCaptureFromWebcam" aria-hidden="true"></i><br>' + parameters.CaptureFromWebcamText,
                 }).on('click', () => {
                     if (!isStarted) {
                         $("#previewPane").hide();
@@ -193,7 +193,7 @@
                 class: "btn btn-primary",
                 type: "button",
                 id: "snap",
-                text: i18next.t("Snap Photo")
+                text: parameters.SnapPhotoText
             })
         ));
         return capture;
@@ -219,13 +219,12 @@
                 type: "button",
                 id: "retake",
                 style: "display:none",
-                text: i18next.t("Re-Take Photo")
+                text: parameters.ReTakePhotoText
             }).on('click', () => {
                 retakeSnapshot();
             })
         );
         return capture;
-
     }
 
     // Fetch an array of devices of a certain type
@@ -332,7 +331,7 @@
                 type: "button",
                 class: "btn btn-default",
                 "data-dismiss": "modal",
-                text: i18next.t("Close")
+                text: parameters.CloseText
             }).on('click', (event) => {
                 $("#capturePane").hide();
                 $("#previewPane").hide();
@@ -344,7 +343,7 @@
                 type: "submit",
                 class: "btn btn-primary",
                 "data-dismiss": "modal",
-                text: '<i class="fa-solid fa-file-import"></i>' + i18next.t("Upload Image")
+                text: '<i class="fa-solid fa-file-import"></i>' + parameters.UploadImageText
             }).on('click', (event) => {
                 parameters.uploadImage(event);
             })
