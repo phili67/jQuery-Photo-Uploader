@@ -1,7 +1,7 @@
 # jQuery Photo Uploader
 jQuery Plugin for uploading local photos and capturing from a webcam
 
-<img width="812" height="1095" alt="preview1" src="https://github.com/user-attachments/assets/ae3b54fb-9cb6-4c92-b23a-0540aec71a71" />
+<img width="812" height="1095" alt="preview1" src="https://github.com/user-attachments/assets/6cb15224-140c-4ca7-90b6-f40cb611d55e" />
 
 
 ## Run Conditions
