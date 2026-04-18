@@ -5,6 +5,9 @@
     var inputCache = [];
     var cameraId = 0;
     var isStarted = false;
+    var canvasOffset = null;
+    var stream = null;
+    var videoElement = null;
 
     var camera = {
         deviceIds: [],
@@ -39,7 +42,9 @@
 
     $.fn.PhotoUploader = function (userParameters) {
         parameters = $.extend({}, $.fn.PhotoUploader.defaultParameters, userParameters);
-        this.stream = null;
+
+        camera.constraints.video.width.min = parameters.photoWidth;
+        camera.constraints.video.height.min = parameters.photoHeight;
 
         canvas = $("<canvas>", {
             id: "canvas",
@@ -50,10 +55,12 @@
             .on('mousedown', handleMouseDown)
             .on('touchstart', handleMouseDown);
 
-        $(document).on('mousemove', handleMouseMove)
-            .on('touchmove', handleMouseMove)
-            .on('touchend', handleMouseUp)
-            .on('mouseup', handleMouseUp);
+        $(document).off('.photoUploader')
+            .on('mousemove.photoUploader', handleMouseMove)
+            .on('touchmove.photoUploader', handleMouseMove)
+            .on('touchend.photoUploader', handleMouseUp)
+            .on('touchcancel.photoUploader', handleMouseUp)
+            .on('mouseup.photoUploader', handleMouseUp);
 
         canvasOffset = canvas.offset();
         mouseEvents.offsetX = canvasOffset.left;
@@ -78,19 +85,39 @@
             class: "modal-header"
         });
 
-        modalHeader.append($("<h4>", {
-            class: "modal-title",
-            id: "upload-Image-label",
-            text: parameters.UploadPhotoText
-        })).append($("<button>", {
-            type: "button",
-            class: "bootbox-close-button close",
-            'html': "&times;",
-            'data-dismiss': "modal",
-            'aria-label': "Close"
+        modalHeader.append(
+            $("<div>", {
+                class: "d-flex align-items-center"
+            }).append(
+                $("<span>", {
+                    class: "mr-3 text-primary h4 mb-0",
+                    html: '<i class="fas fa-camera-retro"></i>'
+                })
+            ).append(
+                $("<div>").append(
+                    $("<h4>", {
+                        class: "modal-title mb-1",
+                        id: "upload-Image-label",
+                        text: parameters.UploadPhotoText
+                    })
+                ).append(
+                    $("<div>", {
+                        class: "small text-muted",
+                        text: parameters.CaptureFromWebcamText + ' / ' + parameters.UploadExistingPhotoText
+                    })
+                )
+            )
+        ).append(
+            $("<button>", {
+                type: "button",
+                class: "bootbox-close-button close",
+                'html': "&times;",
+                'data-dismiss': "modal",
+                'aria-label': "Close"
             }).on('click', () => {
-            stopVideo();
-        }));
+                stopVideo();
+            })
+        );
 
         return modalHeader;
     }
@@ -99,9 +126,9 @@
         var fileSelect = $("<div>", {
             class: function () {
                 if (canCapture()) {
-                    return "col-md-6";
+                    return "col-md-6 mb-3";
                 } else {
-                    return "col-md-12"
+                    return "col-md-12 mb-3";
                 }
             },
             id: "fileSelect"
@@ -120,37 +147,91 @@
         ).append(
             $("<label>", {
                 for: "file",
-                html: '<i class="far fa-image IconCaptureFromWebcam"></i><br/> '+ parameters.UploadExistingPhotoText
-            })
-        ).append(
-            $("<p>", {
-                text: parameters.MaxPhotoSizeText + ": " + parameters.maxPhotoSize
-            })
+                class: "card card-outline card-primary h-100 mb-0 text-center shadow-sm",
+                style: "cursor:pointer"
+            }).append(
+                $("<div>", {
+                    class: "card-body d-flex flex-column justify-content-center"
+                }).append(
+                    $("<span>", {
+                        class: "badge badge-primary align-self-center mb-3",
+                        text: '1'
+                    })
+                ).append(
+                    $("<div>", {
+                        class: "text-primary mb-3",
+                        html: '<i class="far fa-image fa-2x"></i>'
+                    })
+                ).append(
+                    $("<div>", {
+                        class: "font-weight-bold mb-2",
+                        text: parameters.UploadExistingPhotoText
+                    })
+                ).append(
+                    $("<div>", {
+                        class: "small text-muted mb-3",
+                        text: parameters.MaxPhotoSizeText + ': ' + parameters.maxPhotoSize
+                    })
+                ).append(
+                    $("<span>", {
+                        class: "btn btn-outline-primary btn-sm align-self-center",
+                        text: parameters.UploadExistingPhotoText
+                    })
+                )
+            )
         );
+
         return fileSelect;
     }
 
     function createCameraSelect() {
         if (canCapture()) {
             var cameraSelect = $("<div>", {
-                class: "col-md-6",
+                class: "col-md-6 mb-3",
                 id: "cameraSelect"
             }).append(
                 $("<label>", {
                     id: "captureFromWebcam",
-                    html: '<i class="fas fa-video IconCaptureFromWebcam" aria-hidden="true"></i><br>' + parameters.CaptureFromWebcamText,
+                    class: "card card-outline card-info h-100 mb-0 text-center shadow-sm",
+                    style: "cursor:pointer"
                 }).on('click', () => {
                     if (!isStarted) {
                         $("#previewPane").hide();
                         $("#capturePane").show();
                         $("#retake").show();
                         startVideo(camera);
-                        $("#snap").on ('click', () => {
-                            snapshotVideo();
-                        })
                     }
                     isStarted = true;
-                })
+                }).append(
+                    $("<div>", {
+                        class: "card-body d-flex flex-column justify-content-center"
+                    }).append(
+                        $("<span>", {
+                            class: "badge badge-info align-self-center mb-3",
+                            text: '2'
+                        })
+                    ).append(
+                        $("<div>", {
+                            class: "text-info mb-3",
+                            html: '<i class="fas fa-video fa-2x" aria-hidden="true"></i>'
+                        })
+                    ).append(
+                        $("<div>", {
+                            class: "font-weight-bold mb-2",
+                            text: parameters.CaptureFromWebcamText
+                        })
+                    ).append(
+                        $("<div>", {
+                            class: "small text-muted mb-3",
+                            text: parameters.SnapPhotoText
+                        })
+                    ).append(
+                        $("<span>", {
+                            class: "btn btn-outline-info btn-sm align-self-center",
+                            text: parameters.CaptureFromWebcamText
+                        })
+                    )
+                )
             );
 
             // Get the initial set of cameras connected
@@ -166,65 +247,127 @@
         if (!canCapture()) {
             return null;
         }
-        var capture = $("<div>", {
-            class: "",
-            id: "capturePane",
-            style: "display:none; text-align: center"
-        }).append($("<div>", {
-            class: "cold-md-12 text-center",
-            style:'margin-top:10px'
+        var captureCard = $("<div>", {
+            class: "card card-outline card-info shadow-sm mb-0"
         }).append(
-            $("<video>", {
-                id: "video",
-                width: parameters.photoWidth,
-                height: parameters.photoHeight,
-                style: "margin-left: auto;margin-right: auto;display: block;max-width: " + parameters.photoWidth+"px;max-height:" + parameters.photoHeight+"px",
-                style: "padding: 0;margin: auto;display: block;max-width: " + parameters.photoWidth+"px;max-height:" + parameters.photoHeight+"px;position: relative;top: 0;bottom: 0;left: 0;right: 0;",
-                controls: true
-            })
+            $("<div>", {
+                class: "card-header d-flex align-items-center justify-content-between"
+            }).append(
+                $("<h5>", {
+                    class: "card-title mb-0",
+                    html: '<i class="fas fa-video mr-2"></i>' + parameters.CaptureFromWebcamText
+                })
+            ).append(
+                $("<span>", {
+                    class: "badge badge-info",
+                    text: '2'
+                })
+            )
         ).append(
-            $("<br>")
-        ).append(
-            createCameraChooser()
-        ).append(
-            $("<br>")
-        ).append(
-            $("<button>", {
-                class: "btn btn-primary",
-                type: "button",
-                id: "snap",
-                text: parameters.SnapPhotoText
-            })
-        ));
-        return capture;
+            $("<div>", {
+                class: "card-body text-center"
+            }).append(
+                $("<video>", {
+                    id: "video",
+                    width: parameters.photoWidth,
+                    height: parameters.photoHeight,
+                    class: "img-fluid rounded border mb-3",
+                    style: "padding: 0;margin: auto;display: block;max-width: " + parameters.photoWidth + "px;max-height:" + parameters.photoHeight + "px;position: relative;top: 0;bottom: 0;left: 0;right: 0;",
+                    controls: true
+                })
+            ).append(
+                $("<div>", {
+                    class: "small text-muted mb-3",
+                    text: parameters.SnapPhotoText + ' - ' + parameters.CaptureFromWebcamText
+                })
+            ).append(
+                createCameraChooser()
+            ).append(
+                $("<div>", {
+                    class: "mt-3"
+                }).append(
+                    $("<button>", {
+                        class: "btn btn-primary",
+                        type: "button",
+                        id: "snap",
+                        html: '<i class="fas fa-camera mr-2"></i>' + parameters.SnapPhotoText
+                    }).on('click', () => {
+                        snapshotVideo();
+                    })
+                )
+            ).append(
+                $("<div>", {
+                    class: "small text-muted mt-3",
+                    text: parameters.ReTakePhotoText
+                })
+            )
+        );
+
+        return $("<div>", {
+            class: "col-md-12",
+            id: "capturePane",
+            style: "display:none; margin: 0 auto 1rem auto; max-width: " + (parameters.photoWidth + 80) + "px;"
+        }).append(captureCard);
     }
 
     function createPreviewPane() {
-        var capture = $("<div>", {
+        var previewCard = $("<div>", {
+            class: "card card-outline card-secondary shadow-sm mb-0"
+        }).append(
+            $("<div>", {
+                class: "card-header d-flex align-items-center justify-content-between"
+            }).append(
+                $("<h5>", {
+                    class: "card-title mb-0",
+                    html: '<i class="fas fa-crop-alt mr-2"></i>' + parameters.UploadImageText
+                })
+            ).append(
+                $("<span>", {
+                    class: "badge badge-secondary",
+                    text: '3'
+                })
+            )
+        ).append(
+            $("<div>", {
+                class: "card-body"
+            }).append(
+                $("<div>", {
+                    class: "small text-muted mb-3",
+                    text: parameters.ReTakePhotoText + ' / ' + parameters.UploadImageText
+                })
+            ).append(
+                canvas
+            ).append(
+                $("<div>", {
+                    class: "small text-muted mt-3",
+                    text: parameters.UploadImageText
+                })
+            ).append(
+                $("<div>", {
+                    class: "mt-3"
+                }).append(createEditControls())
+            ).append(
+                $("<div>", {
+                    class: "mt-3"
+                }).append(
+                    $("<button>", {
+                        class: "btn btn-outline-warning",
+                        type: "button",
+                        id: "retake",
+                        style: "display:none",
+                        html: '<i class="fas fa-redo mr-2"></i>' + parameters.ReTakePhotoText
+                    }).on('click', () => {
+                        retakeSnapshot();
+                    })
+                )
+            )
+        );
+
+        return $("<div>", {
             class: "col-md-12 text-center",
             id: "previewPane",
-            //style: "display: none; text-align: center;width:" + parameters.photoWidth + "px"
-            style: "padding: 0;margin: auto;display: none;max-width: " + parameters.photoWidth+"px;max-height:" + parameters.photoHeight+"px;position: relative;top: 0;bottom: 0;left: 0;right: 0;",
-        }).append(
-            canvas
-        ).append(
-            $("<br>")
-        ).append(
-            createEditControls()
-        ).append(
-            $("<br>")
-        ).append(
-            $("<button>", {
-                class: "btn btn-warning",
-                type: "button",
-                id: "retake",
-                style: "display:none",
-                text: parameters.ReTakePhotoText
-            }).on('click', () => {
-                retakeSnapshot();
-            })
-        );
-        return capture;
+            style: "padding: 0; margin: 0 auto 1rem auto; display: none; max-width: " + (parameters.photoWidth + 80) + "px;",
+        }).append(previewCard);
     }
 
     // Fetch an array of devices of a certain type
@@ -233,8 +376,8 @@
 
         await navigator.mediaDevices.enumerateDevices()
         .then(devices => {
-            const listElement  = $('#availableCameras')
-            listElement.html = '';
+            const listElement  = $('#availableCameras');
+            listElement.empty();
 
             for (var i = 0; i < devices.length; i++) {
                 if (devices[i].kind !== type) {
@@ -246,13 +389,15 @@
     }
 
     // Listen for changes to media devices and update the list accordingly
-    navigator.mediaDevices.addEventListener('devicechange', event => {        
-        getConnectedDevices('videoinput');
-    });
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
+        navigator.mediaDevices.addEventListener('devicechange', () => {
+            getConnectedDevices('videoinput');
+        });
+    }
 
     function createCameraChooser() {
         var cameraChooser = $("<select>", {
-            class: 'form-control',
+            class: 'form-control form-control-sm',
             id: 'availableCameras'
         }).on('change', () => {
             camera.constraints.video.deviceId =  $('#availableCameras').find(":checked").val();
@@ -264,26 +409,27 @@
 
     function createEditControls() {
         var editControls = $("<div>", {
-            id: "editControls"
+            id: "editControls",
+            class: "btn-group btn-group-sm"
         });
 
         editControls.append(
             $("<button>", {
-                class: "btn btn-default",
+                class: "btn btn-outline-secondary",
                 type: "button",
                 id: "shrink",
-                text: "-",
-                style: "font-size:20px"
+                title: '-',
+                html: '<i class="fas fa-search-minus mr-1"></i>-'
             }).on('click', () => {
                 shrinkImage();
             })
         ).append(
             $("<button>", {
-                class: "btn btn-default",
+                class: "btn btn-outline-secondary",
                 type: "button",
                 id: "grow",
-                text: "+",
-                style: "font-size:20px"
+                title: '+',
+                html: '<i class="fas fa-search-plus mr-1"></i>+'
             }).on('click', () => {
                 growImage();
             })
@@ -297,23 +443,61 @@
             class: "modal-body"
         });
 
+        var alertInfo = $("<div>", {
+            class: "alert alert-light border d-flex align-items-start"
+        }).append(
+            $("<div>", {
+                class: "mr-3 text-primary",
+                html: '<i class="fas fa-info-circle fa-lg"></i>'
+            })
+        ).append(
+            $("<div>").append(
+                $("<div>", {
+                    class: "font-weight-bold",
+                    text: parameters.UploadPhotoText
+                })
+            ).append(
+                $("<div>", {
+                    class: "small text-muted",
+                    text: parameters.UploadExistingPhotoText + ' / ' + parameters.CaptureFromWebcamText
+                })
+            )
+        );
+
+        var sourceRow = $("<div>", {
+            class: "row"
+        }).append(
+            createFileSelect()
+        ).append(
+            createCameraSelect()
+        );
+
+        var previewRow = $("<div>", {
+            class: "row"
+        }).append(
+            $("<div>", {
+                id: "imageArea",
+                style: "width:100%"
+            }).append(
+                createCapturePane()
+            ).append(
+                createPreviewPane()
+            )
+        );
+
         var container = $("<div>", {
             class: "container-fluid"
         }).append(
-            $("<div>", {class: "row"}).append(
-                createFileSelect()
-            ).append(
-                createCameraSelect()
-            )
+            alertInfo
         ).append(
-            $("<div>", {class: "row"}).append(
-                $("<div>", {
-                    id: "imageArea",
-                    style:"width:100%"
-                })
-                    .append(createCapturePane())
-                    .append(createPreviewPane())
-            )
+            $("<div>", {
+                class: "small text-muted mb-3 text-center",
+                text: '1. ' + parameters.UploadExistingPhotoText + '   2. ' + parameters.CaptureFromWebcamText + '   3. ' + parameters.UploadImageText
+            })
+        ).append(
+            sourceRow
+        ).append(
+            previewRow
         );
 
         let body = modalBody.append(container);
@@ -327,11 +511,16 @@
         });
 
         modalFooter.append(
+            $("<div>", {
+                class: "mr-auto small text-muted",
+                text: parameters.UploadImageText
+            })
+        ).append(
             $("<button>", {
                 type: "button",
-                class: "btn btn-default",
+                class: "btn btn-outline-secondary",
                 "data-dismiss": "modal",
-                text: parameters.CloseText
+                html: '<i class="fas fa-times mr-2"></i>' + parameters.CloseText
             }).on('click', (event) => {
                 $("#capturePane").hide();
                 $("#previewPane").hide();
@@ -343,7 +532,8 @@
                 type: "submit",
                 class: "btn btn-primary",
                 "data-dismiss": "modal",
-                text: parameters.UploadImageText
+                style: "display:none",
+                html: '<i class="fas fa-upload mr-2"></i>' + parameters.UploadImageText
             }).on('click', (event) => {
                 parameters.uploadImage(event);
             })
@@ -392,44 +582,48 @@
         );
     }
 
+    function setUploadButtonVisible(isVisible) {
+        $('#uploadImage').toggle(!!isVisible);
+    }
+
     function startVideo(camera) {
         $("#photoOr").show();
         $("#photoCapture").show();
+        setUploadButtonVisible(false);
 
         // Grab elements, create settings, etc.
-        this.video = document.getElementById('video');
+        videoElement = document.getElementById('video');
 
         if (parameters.fakeVideo) {
-            this.video.src = 'http://vjs.zencdn.net/v/oceans.mp4';
-            this.video.play();
+            videoElement.src = 'http://vjs.zencdn.net/v/oceans.mp4';
+            videoElement.play();
             return;
         }
 
-        if (this.stream != null) {
-            // now get all tracks
-            tracks = this.stream.getTracks();
-            // now close each track by having forEach loop
-            tracks.forEach(function(track) {
-                // stopping every track
+        if (stream) {
+            stream.getTracks().forEach(function (track) {
                 track.stop();
             });
-
-            stream = this.stream = null;
+            stream = null;
         }
 
         navigator.mediaDevices.getUserMedia(camera.constraints)
-            .then(function (stream) {
-                this.stream = stream;
-                var video = document.querySelector('video');
+            .then(function (mediaStream) {
+                stream = mediaStream;
+
+                if (!videoElement) {
+                    return;
+                }
+
                 // Older browsers may not have srcObject
-                if ("srcObject" in video) {
-                    video.srcObject = stream;
+                if ("srcObject" in videoElement) {
+                    videoElement.srcObject = mediaStream;
                 } else {
                     // Avoid using this in new browsers, as it is going away.
-                    video.src = window.URL.createObjectURL(stream);
+                    videoElement.src = window.URL.createObjectURL(mediaStream);
                 }
-                video.onloadedmetadata = function (e) {
-                    video.play();
+                videoElement.onloadedmetadata = function () {
+                    videoElement.play();
                 };
                 
             })
@@ -439,45 +633,54 @@
     }
 
     function stopVideo() {
-        stream = this.stream;
-
         if (stream) {
-            // now get the steam 
-            
-            // now get all tracks
-            tracks = stream.getTracks();
-            // now close each track by having forEach loop
-            tracks.forEach(function(track) {
-                // stopping every track
+            stream.getTracks().forEach(function (track) {
                 track.stop();
             });
+            stream = null;
+        }
 
-            stream = this.stream = null;
+        if (videoElement) {
+            if ('srcObject' in videoElement) {
+                videoElement.srcObject = null;
+            } else {
+                videoElement.src = '';
+            }
         }
         
         $("#previewPane").hide();
         $("#capturePane").hide();
         $("#retake").hide();                
+        setUploadButtonVisible(false);
 
         isStarted = false;
+        mouseEvents.prevDistance = 0;
     }
 
     function retakeSnapshot() {
-        this.video.play();
+        if (videoElement) {
+            videoElement.play();
+        }
         $("#previewPane").hide();
         $("#capturePane").show();
+        setUploadButtonVisible(false);
     }
 
     function snapshotVideo() {
-        this.video.pause();
-        currentImage.image = this.video;
-        currentImage.width = this.video.videoWidth;
-        currentImage.height = this.video.videoHeight;
+        if (!videoElement) {
+            return;
+        }
+
+        videoElement.pause();
+        currentImage.image = videoElement;
+        currentImage.width = videoElement.videoWidth;
+        currentImage.height = videoElement.videoHeight;
         fitImage();
         calcEdges();
         updateCanvas();
         $("#capturePane").hide();
         $("#previewPane").show();
+        setUploadButtonVisible(true);
     }
 
     function fileSelectChanged(fileSelect) {
@@ -491,6 +694,7 @@
         $("#capturePane").hide();
         stopVideo();
         $("#previewPane").show();
+        setUploadButtonVisible(true);
 
         currentImage.image = new Image();
         currentImage.image.onload = function () {
@@ -511,6 +715,8 @@
     }
 
     function fitImage() {
+        var ar;
+
         if (currentImage.width > parameters.photoWidth) {
             //if the image is wider than the user asked for
             ar = currentImage.height / currentImage.width;
@@ -551,7 +757,7 @@
                 // Pythagorean theorem
                 mouseEvents.distance = Math.sqrt(diffX * diffX + diffY * diffY);
 
-                if (mouseEvents.isDragging) {
+                if (e.type === 'touchstart' || !mouseEvents.prevDistance) {
                     mouseEvents.prevDistance = mouseEvents.distance;
                 }
             }
@@ -574,7 +780,28 @@
     function removeInput(e) {
         if (e.type === 'mouseup') {
             inputCache = [];
+            return;
         }
+
+        if (e.type === 'touchend' || e.type === 'touchcancel') {
+            var remainingTouches = e.originalEvent && e.originalEvent.touches ? e.originalEvent.touches : [];
+            inputCache = [];
+
+            for (var touchIndex = 0; touchIndex < remainingTouches.length; touchIndex++) {
+                inputCache.push({
+                    clientX: remainingTouches[touchIndex].clientX,
+                    clientY: remainingTouches[touchIndex].clientY,
+                    identifier: remainingTouches[touchIndex].identifier
+                });
+            }
+
+            if (inputCache.length < 2) {
+                mouseEvents.prevDistance = 0;
+            }
+
+            return;
+        }
+
         // Remove this event from the target's cache
         for (var i = 0; i < inputCache.length; i++) {
             if (inputCache[i].pointerId == e.pointerId) {
@@ -602,15 +829,18 @@
     function handleMouseMove(e) {
         getInput(e);
         if (mouseEvents.isDragging) {
-            dX = parseInt(inputCache[0].clientX) - mouseEvents.startX - mouseEvents.offsetX;
-            dY = parseInt(inputCache[0].clientY) - mouseEvents.startY - mouseEvents.offsetY;
+            var dX = parseInt(inputCache[0].clientX, 10) - mouseEvents.startX - mouseEvents.offsetX;
+            var dY = parseInt(inputCache[0].clientY, 10) - mouseEvents.startY - mouseEvents.offsetY;
             currentImage.top += dY;
             currentImage.bottom += dY;
             currentImage.left += dX;
             currentImage.right += dX;
-            mouseEvents.startX = parseInt(inputCache[0].clientX);
-            mouseEvents.startY = parseInt(inputCache[0].clientY);
+            mouseEvents.startX = parseInt(inputCache[0].clientX, 10);
+            mouseEvents.startY = parseInt(inputCache[0].clientY, 10);
             updateCanvas();
+            if (e.cancelable) {
+                e.preventDefault();
+            }
 
         } else if (inputCache.length == 2) {
             var scale = mouseEvents.distance / mouseEvents.prevDistance;
@@ -625,6 +855,9 @@
 
             // Cache the distance for the next move event
             mouseEvents.prevDistance = mouseEvents.distance;
+            if (e.cancelable) {
+                e.preventDefault();
+            }
         }
     }
 
